@@ -21,43 +21,47 @@ folder named 'out'
 #!TODO make the convert function dual-functional: jpg->ppm and ppm->jpg
 from PIL import Image
 from numpy import array
-import glob, os
+from glob import glob
+from os import path, makedirs
 from dataclasses import dataclass
+
 
 @dataclass
 class image_data:
-    filename : str
-    img : array
-    width : int
-    height : int
+    filename: str
+    img: array
+    width: int
+    height: int
 
-# returns a directory with the output images
+
 def convertDir(targetDir, targetFormat='JPG', outputDir='out', outputName: str = None) -> str:
     # gets all files in dir that matches the given (or defaultm 'JPG') format
-    files = glob.glob(os.path.join(targetDir, f'*.{targetFormat}'))
+    files = glob.glob(path.join(targetDir, f'*.{targetFormat}'))
     # converts each file in dir
     for i, file in enumerate(files):
-        file = os.path.split(file)[1] # gets rid of target directory in filename/path
-        print( convert(file, targetDir=targetDir, outputDir=outputDir, imageNum=i+1, outputName=outputName) )
-    
-    return os.path.join(outputDir)
+        # gets rid of target directory in filename/path
+        file = path.split(file)[1]
+        print(convertToPpm(file, targetDir=targetDir, outputDir=outputDir,
+              imageNum=i+1, outputName=outputName))
+
+    # returns the number of files converted
+    return len(file)
 
 
-
-def convert(file: str, targetDir='', outputDir='', imageNum: int = None, outputName: str = None) -> str:
-    files = glob.glob(os.path.join(targetDir, file))
+def convertToPpm(file: str, targetDir='', outputDir='', imageNum: int = None, outputName: str = None) -> str:
+    files = glob.glob(path.join(targetDir, file))
     for file in files:
         # creates preImage, which is PIL's image
-        filename = os.path.splitext(file)[0]
-        filename = os.path.split(filename)[1]
+        filename = path.splitext(file)[0]
+        filename = path.split(filename)[1]
         # if output name is given, use it
         if outputName is not None:
             filename = outputName
         # if image numbers are give format filename accordingly
         if imageNum is not None:
-            filename = f'{filename}_{imageNum:0>3}'# like 'filename_001'
+            filename = f'{filename}_{imageNum:0>3}'  # like 'filename_001'
         preImage = Image.open(file)
-        
+
         # converts image data to 2d array of pixels with rgb values
         pixels = array(preImage)
         preImage.close()
@@ -65,24 +69,21 @@ def convert(file: str, targetDir='', outputDir='', imageNum: int = None, outputN
         width = len(pixels[0])
         height = len(pixels)
         # print(f'{width=} {height=}')
-        
+
         # passes all image information to write function
         imageDataObject = image_data(filename, pixels, width, height)
         __writeImageData(imageDataObject, outputDir=outputDir)
-        
-        
-        return os.path.join(outputDir, filename + '.ppm')
-        
-        
-        
-        
+
+        return path.join(outputDir, filename + '.ppm')
+
+
 def __writeImageData(imageDataObject: image_data, outputDir='') -> None:
     # makes sure outputDir exists if used
-    if outputDir != '' and not os.path.isdir(outputDir):
-        os.makedirs(outputDir)
-    
+    if outputDir != '' and not path.isdir(outputDir):
+        makedirs(outputDir)  # os.makedirs
+
     # writes pixels to the output file
-    path = os.path.join(outputDir, imageDataObject.filename + '.ppm')
+    path = path.join(outputDir, imageDataObject.filename + '.ppm')
     with open(path, 'w') as out:
         # writes header
         out.write('P3\n')
@@ -91,12 +92,4 @@ def __writeImageData(imageDataObject: image_data, outputDir='') -> None:
         # writes body (pixels)
         for row in imageDataObject.img:
             for column in row:
-                out.write(
-                    f'{column[0]} {column[1]} {column[2]}\n')
-
-
-
-if __name__ == "__main__":
-    # convert('ss.png')
-    # convert('IMG_8072.JPG')
-    convertDir('./test', 'png')
+                out.write(f'{column[0]} {column[1]} {column[2]}\n')
